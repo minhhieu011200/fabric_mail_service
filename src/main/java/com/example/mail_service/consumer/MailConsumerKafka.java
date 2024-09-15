@@ -1,5 +1,8 @@
 package com.example.mail_service.consumer;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -28,23 +31,40 @@ public class MailConsumerKafka {
 	@Autowired
 	private EmailLogService emailLogService;
 
+	@Autowired
+	private ExecutorService executorService; // Create a thread pool
+
 	@KafkaListener(topics = "${spring.kafka.topic}", groupId = "${spring.kafka.groupid}")
 	public void listen(ConsumerRecord<String, String> records) {
 		try {
 			String message = records.value();
-			proccessListener(message);
-
+			executorService.submit(() -> processListener(message));
 		} catch (Exception e) {
-			
+
 		}
 
 	}
 
-	public void proccessListener(String message)
-			throws JsonMappingException, JsonProcessingException, MessagingException {
+	public void processListener(String message) {
+		log.info("Thread: " + Thread.currentThread().getName() + " message: " + message);
+
+		try {
+			processMessage(message);
+		} catch (JsonProcessingException | MessagingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			log.error("Thread error" + e.getMessage());
+			Thread.currentThread().interrupt();
+		}
+
+	}
+
+	public void processMessage(String message)
+			throws JsonMappingException, JsonProcessingException, MessagingException, InterruptedException {
 		ObjectMapper objectMapper = new ObjectMapper();
 		ResponseSendFileEmailDTO messageObj = objectMapper.readValue(message, ResponseSendFileEmailDTO.class);
-		if (messageObj.getTemplateId() != null) {
+		if (messageObj.getTemplate() != null && !messageObj.getTemplate().isEmpty()) {
 			EmailLog newEmailLog = emailLogService.createEmailLog(messageObj);
 			try {
 				emailLogService.updateEmailLog(newEmailLog.getId(), EnumStatusMail.SENDING);
@@ -54,11 +74,10 @@ public class MailConsumerKafka {
 				sendFileEmailDTO.setSubject(newEmailLog.getTemplateEmail().getSubject());
 				sendFileEmailDTO.setFileTemplate(newEmailLog.getTemplateEmail().getFile());
 
-				
 				sendFileEmailDTO.setDataTemplate(newEmailLog.getDataTemplate());
 
 				Boolean checkSendMail = mailService.sendHtmlEmail(sendFileEmailDTO);
-				if(checkSendMail) {
+				if (checkSendMail) {
 					emailLogService.updateEmailLog(newEmailLog.getId(), EnumStatusMail.SENDED);
 				}
 			} catch (Exception e) {

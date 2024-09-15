@@ -24,7 +24,7 @@ public class EmailLogService {
 	TemplateEmailRepository templateEmailRepository;
 
 	public EmailLog createEmailLog(ResponseSendFileEmailDTO createEmailLog) {
-		TemplateEmail templateEmail = templateEmailRepository.findById(createEmailLog.getTemplateId())
+		TemplateEmail templateEmail = templateEmailRepository.findByTemplate(createEmailLog.getTemplate())
 				.orElseThrow(null);
 
 		EmailLog emailLog = new EmailLog();
@@ -48,12 +48,12 @@ public class EmailLogService {
 	}
 
 	public EmailLog updateEmailLog(Long id, EnumStatusMail status) {
-		EmailLog findEmailLog = emailLogRepository.findById(id).orElse(null);
-
-		if (findEmailLog == null) {
-			return null;
-		}
-		findEmailLog.setStatus(status);
-		return emailLogRepository.save(findEmailLog);
+		return emailLogRepository.findById(id)
+		        .map(emailLog -> {
+		            emailLog.setStatus(status);
+		            emailLogRepository.save(emailLog);
+		            return emailLog;
+		        })
+		        .orElse(null);  // Return null if EmailLog not found
 	}
 }

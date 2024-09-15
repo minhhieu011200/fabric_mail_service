@@ -3,6 +3,7 @@ package com.example.mail_service.entities;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
@@ -25,7 +26,7 @@ public class EmailLog extends BaseEntities {
 	private String attachment;
 
 	// danh cho file html, jasper
-	@ManyToOne
+	@ManyToOne(fetch = FetchType.LAZY)
 	@JoinColumn(name = "template_id", referencedColumnName = "id")
 	private TemplateEmail templateEmail;
 	private String dataTemplate;

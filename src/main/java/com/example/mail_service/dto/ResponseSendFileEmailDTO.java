@@ -15,7 +15,7 @@ import lombok.ToString;
 @ToString
 public class ResponseSendFileEmailDTO {
 	private String toMail;
-	private Long templateId;
+	private String template;
 	private Object dataTemplate;
 
 }
